@@ -7,7 +7,7 @@ import uuid
 
 from flask import Blueprint, request, redirect, session, url_for
 from flask_login import current_user, login_user, logout_user
-from flask_oauth import OAuth
+from authlib.integrations.flask_client import OAuth
 from sqlalchemy.exc import IntegrityError
 
 import config
@@ -20,82 +20,81 @@ CHESS_PIECES = ['Pawn', 'Knight', 'Bishop', 'Rook', 'Queen', 'King']
 PROFILE_PIC_SIZE_LIMIT = 1024 * 64
 
 oauth = OAuth()
-google = oauth.remote_app(
-    'google',
-    base_url='https://www.google.com/accounts/',
-    authorize_url='https://accounts.google.com/o/oauth2/auth',
-    request_token_url=None,
-    request_token_params={
-        'scope': 'email',
-        'response_type': 'code',
-    },
-    access_token_url='https://accounts.google.com/o/oauth2/token',
-    access_token_method='POST',
-    access_token_params={'grant_type': 'authorization_code'},
-    consumer_key=config.GOOGLE_CLIENT_ID,
-    consumer_secret=config.GOOGLE_CLIENT_SECRET
-)
 
 user = Blueprint('user', __name__)
+
+
+def init_oauth(app):
+    oauth.init_app(app)
+    oauth.register(
+        name='google',
+        client_id=config.GOOGLE_CLIENT_ID,
+        client_secret=config.GOOGLE_CLIENT_SECRET,
+        server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
+        client_kwargs={
+            'scope': 'openid email profile'
+        }
+    )
 
 
 @user.route('/login', methods=['GET'])
 def login():
     next_url = request.args.get('next') or url_for('index')
-    print 'login', request.args
+    print('login', request.args)
 
     if current_user.is_authenticated:
         return redirect(next_url)
 
     callback = url_for('user.authorized', _external=True)
-    if 'kfchess.com' in callback:
+    if 'fly.dev' in callback or 'kfchess.com' in callback:
         callback = callback.replace('http://', 'https://')
 
-    google.request_token_params['state'] = next_url
-    return google.authorize(callback=callback)
+    session['oauth_next_url'] = next_url
+    return oauth.google.authorize_redirect(callback)
 
 
 @user.route('/api/user/oauth2callback', methods=['GET'])
-@google.authorized_handler
-def authorized(data):
-    next_url = request.args.get('state') or url_for('index')
-    print 'oauth authorized', request.args
+def authorized():
+    next_url = session.pop('oauth_next_url', url_for('index'))
+    print('oauth authorized', request.args)
 
     if current_user.is_authenticated:
         return redirect(next_url)
 
-    # store access token in the session
-    access_token = data['access_token']
-    session['access_token'] = access_token, ''
+    try:
+        token = oauth.google.authorize_access_token()
+        user_info = token.get('userinfo')
+        
+        if user_info:
+            email = user_info.get('email')
+            
+            if email:
+                print('user data', user_info)
+                
+                user = db_service.get_user_by_email(email)
+                if user is None:
+                    # create user with random username
+                    username = random_username()
+                    while db_service.get_user_by_username(username) is not None:
+                        username = random_username()
 
-    # get user's email from google
-    headers = {'Authorization': 'OAuth ' + access_token}
-    response = requests.get('https://www.googleapis.com/plus/v1/people/me', headers=headers)
-    if response.status_code == 200:
-        user_data = response.json()
+                    user = db_service.create_user(email, username, None, {})
 
-        print 'user data', user_data
-
-        email = [e for e in user_data['emails'] if e['type'] == 'ACCOUNT'][0]['value']
-        user = db_service.get_user_by_email(email)
-        if user is None:
-            # create user with random username
-            username = random_username()
-            while db_service.get_user_by_username(username) is not None:
-                username = random_username()
-
-            user = db_service.create_user(email, username, None, {})
-
-        login_user(user)
-    else:
-        print 'error getting google info', response.status_code, response.text
+                login_user(user)
+            else:
+                print('error: no email in user info')
+        else:
+            print('error: no user info in token')
+    except Exception as e:
+        print('error getting google info', str(e))
+        traceback.print_exc()
 
     return redirect(next_url)
 
 
 @user.route('/logout', methods=['POST'])
 def logout():
-    print 'logout', current_user
+    print('logout', current_user)
 
     logout_user()
 
@@ -110,7 +109,7 @@ def logout():
 @user.route('/api/user/info', methods=['GET'])
 def info():
     user_ids = request.args.getlist('userId')
-    print 'user info', user_ids
+    print('user info', user_ids)
 
     if not user_ids:
         csrf_token = generate_csrf_token()
@@ -133,7 +132,7 @@ def info():
     return json.dumps({
         'users': {
             user_id: user.to_json_obj()
-            for user_id, user in users.iteritems()
+            for user_id, user in users.items()
         },
     })
 
@@ -141,7 +140,7 @@ def info():
 @user.route('/api/user/update', methods=['POST'])
 def update():
     data = json.loads(request.data)
-    print 'user update', data
+    print('user update', data)
 
     if not current_user.is_authenticated:
         return json.dumps({
@@ -189,7 +188,7 @@ def update():
 @user.route('/api/user/uploadPic', methods=['POST'])
 def upload_pic():
     file_bytes = request.data
-    print 'upload pic', len(file_bytes)
+    print('upload pic', len(file_bytes))
 
     if not current_user.is_authenticated:
         return json.dumps({
@@ -215,7 +214,7 @@ def upload_pic():
         key = 'profile-pics/' + str(uuid.uuid4())
         s3.upload_data('com-kfchess-public', key, file_bytes, ACL='public-read')
         url = s3.get_public_url('com-kfchess-public', key)
-        print 's3 upload', key, url
+        print('s3 upload', key, url)
 
         db_service.update_user(user_id, user.username, url)
         user = db_service.get_user_by_id(user_id)
@@ -238,7 +237,7 @@ def history():
     user_id = int(request.args['userId'])
     offset = int(request.args['offset'])
     count = int(request.args['count'])
-    print 'history', request.args
+    print('history', request.args)
 
     history = db_service.get_user_game_history(user_id, offset, count)
 
@@ -260,7 +259,7 @@ def history():
         ],
         'users': {
             user_id: user.to_json_obj()
-            for user_id, user in users.iteritems()
+            for user_id, user in users.items()
         },
     })
 
@@ -268,7 +267,7 @@ def history():
 @user.route('/api/user/campaign', methods=['GET'])
 def campaign():
     user_id = int(request.args['userId'])
-    print 'campaign'
+    print('campaign')
 
     progress = db_service.get_campaign_progress(user_id)
     return json.dumps({
@@ -282,5 +281,5 @@ def random_username():
 
 def generate_csrf_token():
     if '_csrf_token' not in session:
-        session['_csrf_token'] = ''.join(random.choice(string.ascii_uppercase + string.digits) for i in xrange(24))
+        session['_csrf_token'] = ''.join(random.choice(string.ascii_uppercase + string.digits) for i in range(24))
     return session['_csrf_token']

@@ -46,7 +46,7 @@ class Replay(object):
 
     @staticmethod
     def from_json_obj(json):
-        players = {int(k): v for k, v in json['players'].iteritems()}
+        players = {int(k): v for k, v in json['players'].items()}
         moves = [ReplayMove.from_json_obj(json_move) for json_move in json['moves']]
         return Replay(json['speed'], players, moves, json['ticks'])
 

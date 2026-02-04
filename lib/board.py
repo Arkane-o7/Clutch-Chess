@@ -99,7 +99,7 @@ class Board(object):
         }
 
     def __str__(self):
-        board = [[None for col in xrange(8)] for row in xrange(8)]
+        board = [[None for col in range(8)] for row in range(8)]
         for p in self.pieces:
             if not p.captured and p.row == int(p.row) and p.col == int(p.col):
                 board[p.row][p.col] = p
@@ -109,8 +109,8 @@ class Board(object):
     def from_str(s):
         s = [l.strip() for l in s.splitlines() if l.strip()]
         pieces = []
-        for row in xrange(8):
-            for col in xrange(8):
+        for row in range(8):
+            for col in range(8):
                 p = s[row][2*col:2*col+2]
                 if p != '00':
                     pieces.append(Piece.from_str(p, row, col))

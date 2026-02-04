@@ -131,7 +131,7 @@ class BasicBot(object):
         score_threshold = top_n[-1][1] - SCORE_BUFFER
 
         move = random.choice([m for m in all_moves if m[1] >= score_threshold])
-        print 'ai choosing move %s with score %s' % (move[0], move[1])
+        print('ai choosing move %s with score %s' % (move[0], move[1]))
         return move[0][:3]
 
     def _should_move(self, game, randnum):
@@ -204,7 +204,7 @@ class BasicBot(object):
         if piece.type in ['B', 'Q', 'K']:
             for row_dir, col_dir in BISHOP_DIRS:
                 limit = 1 if piece.type == 'K' else 7
-                for i in xrange(1, limit + 1):
+                for i in range(1, limit + 1):
                     row, col = piece.row + i * row_dir, piece.col + i * col_dir
                     if (
                         row >= 0 and row < 8 and col >= 0 and col < 8 and
@@ -217,7 +217,7 @@ class BasicBot(object):
         if piece.type in ['R', 'Q', 'K']:
             for row_dir, col_dir in ROOK_DIRS:
                 limit = 1 if piece.type == 'K' else 7
-                for i in xrange(1, limit + 1):
+                for i in range(1, limit + 1):
                     row, col = piece.row + i * row_dir, piece.col + i * col_dir
                     if (
                         row >= 0 and row < 8 and col >= 0 and col < 8 and
@@ -394,7 +394,7 @@ class BasicBot(object):
             if abs(row_delta) == abs(col_delta):
                 row_dir, col_dir = row_delta / abs(row_delta), col_delta / abs(col_delta)
                 limit = 1 if piece.type == 'K' else 7
-                for i in xrange(1, limit + 1):
+                for i in range(1, limit + 1):
                     row, col = piece.row + i * row_dir, piece.col + i * col_dir
                     if row == t_row and col == t_col:
                         return True
@@ -408,7 +408,7 @@ class BasicBot(object):
                 row_dir = row_delta / abs(row_delta) if row_delta != 0 else 0
                 col_dir = col_delta / abs(col_delta) if col_delta != 0 else 0
                 limit = 1 if piece.type == 'K' else 7
-                for i in xrange(1, limit + 1):
+                for i in range(1, limit + 1):
                     row, col = piece.row + i * row_dir, piece.col + i * col_dir
                     if row == t_row and col == t_col:
                         return True
@@ -447,7 +447,7 @@ if __name__ == '__main__':
 
     bot = get_bot('advanced')
     game = Game(Speed('standard'), {})
-    for i in xrange(10000):
+    for i in range(10000):
         if game.finished:
             break
 
@@ -455,18 +455,18 @@ if __name__ == '__main__':
         if move:
             piece, row, col = move
             if not game.move(piece.id, piece.player, row, col):
-                print piece, row, col
+                print(piece, row, col)
 
         move = bot.get_move(game, 2, random.randint(0, 9999))
         if move:
             piece, row, col = move
             if not game.move(piece.id, piece.player, row, col):
-                print piece, row, col
+                print(piece, row, col)
 
         game.tick()
 
         if i % 100 == 0:
-            print i
+            print(i)
 
     if profile:
         yappi.stop()

@@ -20,7 +20,7 @@ class User(object):
 
     # for flask-login
     def get_id(self):
-        return unicode(self.user_id)
+        return str(self.user_id)
 
     def to_json_obj(self, with_key=False):
         return {
@@ -33,7 +33,7 @@ class User(object):
             'lastOnline': self.last_online and str(self.last_online),
             'currentGame': {
                 key: value
-                for key, value in self.current_game.iteritems()
+                for key, value in self.current_game.items()
                 if with_key or key != 'playerKey'
             } if self.current_game is not None else None,
         }

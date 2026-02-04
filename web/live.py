@@ -16,7 +16,7 @@ def live_games():
     # fetch user info for all players in active games
     user_ids = set()
     for game in active_games:
-        for value in game.game_info['players'].itervalues():
+        for value in game.game_info['players'].values():
             if value.startswith('u:'):
                 user_ids.add(int(value[2:]))
 
@@ -31,6 +31,6 @@ def live_games():
         ],
         'users': {
             user_id: user.to_json_obj()
-            for user_id, user in users.iteritems()
+            for user_id, user in users.items()
         },
     })

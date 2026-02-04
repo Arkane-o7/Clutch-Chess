@@ -29,7 +29,7 @@ socketio = None  # populated by initialize()
 
 
 def generate_game_id():
-    return ''.join(random.choice(string.ascii_uppercase + string.digits) for i in xrange(6))
+    return ''.join(random.choice(string.ascii_uppercase + string.digits) for i in range(6))
 
 
 @game.route('/api/game/new', methods=['POST'])
@@ -37,16 +37,16 @@ def new():
     data = json.loads(request.data)
     speed = data['speed']
     bots = data.get('bots', {})
-    bots = {int(player): ai.get_bot(difficulty) for player, difficulty in bots.iteritems()}
+    bots = {int(player): ai.get_bot(difficulty) for player, difficulty in bots.items()}
     username = data.get('username')
-    print 'new game', data
+    print('new game', data)
 
     # generate game ID and player keys
     game_id = generate_game_id()
-    player_keys = {i: str(uuid.uuid4()) for i in xrange(1, 3) if i not in bots}
+    player_keys = {i: str(uuid.uuid4()) for i in range(1, 3) if i not in bots}
 
     # if logged in, add current user to game
-    players = {i: 'b:%s' % bot.difficulty for i, bot in bots.iteritems()}
+    players = {i: 'b:%s' % bot.difficulty for i, bot in bots.items()}
     if current_user.is_authenticated:
         players[1] = 'u:%s' % current_user.user_id
 
@@ -79,7 +79,7 @@ def new():
 
         socketio.emit('invite', '', room=user.user_id)
 
-    for i in xrange(1, 3):
+    for i in range(1, 3):
         if i not in players:
             players[i] = 'o'
 
@@ -100,7 +100,7 @@ def new():
 @game.route('/api/game/check', methods=['GET'])
 def check():
     game_id = request.args['gameId']
-    print 'check', request.args
+    print('check', request.args)
 
     if not current_user.is_authenticated:
         return json.dumps({
@@ -128,7 +128,7 @@ def invite():
     game_id = data['gameId']
     player = data['player']
     username = data['username']
-    print 'invite', data
+    print('invite', data)
 
     if not current_user.is_authenticated:
         return json.dumps({
@@ -190,7 +190,7 @@ def invite():
 def replay_start():
     data = json.loads(request.data)
     history_id = data['historyId']
-    print 'replay start', data
+    print('replay start', data)
 
     game_history = db_service.get_game_history(history_id)
     if game_history is None:
@@ -227,7 +227,7 @@ def replay_start():
 def campaign_start():
     data = json.loads(request.data)
     level = data['level']
-    print 'campaign start', data
+    print('campaign start', data)
 
     if not current_user.is_authenticated:
         return json.dumps({
@@ -252,7 +252,7 @@ def campaign_start():
 
     # check that user has access to this level
     progress = db_service.get_campaign_progress(user_id)
-    belt = level / 8 + 1
+    belt = level // 8 + 1
     if belt > 1 and not progress.belts_completed[str(belt - 1)]:
         return json.dumps({
             'success': False,
@@ -306,7 +306,7 @@ def initialize(init_socketio):
 
                 if tick_number % 600 == 0:
                     # log extra info and flush every minute
-                    print 'game tick', tick_number
+                    print('game tick', tick_number)
                     sys.stdout.flush()
 
                 randnum = random.randint(0, 9999)
@@ -318,7 +318,7 @@ def initialize(init_socketio):
 
                     if tick_number % 600 == 0:
                         # log extra info every minute
-                        print 'game status', game_id, game.current_tick, game.players, game.finished
+                        print('game status', game_id, game.current_tick, game.players, game.finished)
 
                     # keep games around for 10 min
                     if current_time - game.last_tick_time > 60 * 10:
@@ -344,7 +344,7 @@ def initialize(init_socketio):
                     try:
                         # check for bot moves (after game has been running for 1s)
                         if game.current_tick >= 10:
-                            for player, bot in game_state.bots.iteritems():
+                            for player, bot in game_state.bots.items():
                                 move = bot.get_move(game, player, randnum)
                                 if move:
                                     piece, row, col = move
@@ -380,7 +380,7 @@ def initialize(init_socketio):
 
                             history_id = db_service.add_game_history(Replay.from_game(game))
                             user_id1, user_id2 = None, None
-                            for player, value in game.players.iteritems():
+                            for player, value in game.players.items():
                                 if not value.startswith('u:'):
                                     continue
 
@@ -390,7 +390,7 @@ def initialize(init_socketio):
                                 elif player == 2:
                                     user_id2 = user_id
 
-                                opponents = [v for k, v in game.players.iteritems() if k != player]
+                                opponents = [v for k, v in game.players.items() if k != player]
                                 db_service.add_user_game_history(user_id, game.start_time, {
                                     'speed': game.speed.value,
                                     'player': player,
@@ -425,7 +425,7 @@ def initialize(init_socketio):
                                     },
                                 }
 
-                                print 'new ratings', game_id, data
+                                print('new ratings', game_id, data)
                                 socketio.emit('newratings', data, room=game_id, json=True)
 
                             # update campaign progress
@@ -434,8 +434,8 @@ def initialize(init_socketio):
                                 progress.levels_completed[str(game_state.level)] = True
 
                                 # check if belt is completed
-                                belt = game_state.level / 8 + 1
-                                belt_levels = xrange(8 * belt - 8, 8 * belt)
+                                belt = game_state.level // 8 + 1
+                                belt_levels = range(8 * belt - 8, 8 * belt)
                                 if (
                                     not progress.belts_completed.get(str(belt)) and
                                     all(progress.levels_completed.get(str(level)) for level in belt_levels)
@@ -446,7 +446,7 @@ def initialize(init_socketio):
                                         'belt': belt,
                                     }
 
-                                    print 'new belt', game_id, data
+                                    print('new belt', game_id, data)
                                     socketio.emit('newbelt', data, room=game_id, json=True)
 
                                 db_service.update_campaign_progress(user_id1, progress)
@@ -456,11 +456,11 @@ def initialize(init_socketio):
                 # remove expired games
                 for game_id in expired_games:
                     try:
-                        print 'expiring', game_id
+                        print('expiring', game_id)
                         db_service.remove_active_game(context.SERVER, game_id)
 
                         game = game_states[game_id].game
-                        for player, value in game.players.iteritems():
+                        for player, value in game.players.items():
                             if not value.startswith('u:'):
                                 continue
 

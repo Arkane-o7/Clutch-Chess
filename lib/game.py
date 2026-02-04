@@ -95,7 +95,7 @@ class Game(object):
 
         self.move_ticks = speed.get_move_ticks()
         self.cooldown_ticks = speed.get_cooldown_ticks()
-        self.players_ready = {i + 1: False for i in xrange(num_players)}
+        self.players_ready = {i + 1: False for i in range(num_players)}
 
         self.active_moves = []
         self.cooldowns = []
@@ -123,38 +123,38 @@ class Game(object):
         piece = self.board.get_piece_by_id(piece_id)
         if piece is None or piece.player != player:
             if self.debug:
-                print 'move failed: piece does not exist or is not controlled by player'
+                print('move failed: piece does not exist or is not controlled by player')
             return None
 
         # no moving out of bounds
         if to_row < 0 or to_row >= 8 or to_col < 0 or to_col >= 8:
             if self.debug:
-                print 'move failed: out of bounds'
+                print('move failed: out of bounds')
             return None
 
         # no staying in the same spot
         if piece.row == to_row and piece.col == to_col:
             if self.debug:
-                print 'move failed: original position'
+                print('move failed: original position')
             return None
 
         # check if piece is already moving
         if self._already_moving(piece):
             if self.debug:
-                print 'move failed: piece is already moving'
+                print('move failed: piece is already moving')
             return None
 
         # check if piece is on cooldown
         if self._on_cooldown(piece):
             if self.debug:
-                print 'move failed: piece is on cooldown'
+                print('move failed: piece is on cooldown')
             return None
 
         # check if piece can move to destination
         move_seq_res = self._compute_move_seq(piece, to_row, to_col)
         if not move_seq_res:
             if self.debug:
-                print 'move failed: piece cannot move to destination or is blocked'
+                print('move failed: piece cannot move to destination or is blocked')
             return None
 
         move_seq, extra_move = move_seq_res
@@ -169,14 +169,14 @@ class Game(object):
         # check extra move (for castling)
         if extra_move:
             if self.debug:
-                print 'castling %s' % piece
+                print('castling %s' % piece)
 
             self.active_moves.append(extra_move)
             self.move_log.append(extra_move)
             extra_move.piece.moved = True
 
         if self.debug:
-            print 'moving %s along %s from tick %s' % (piece, move_seq, self.current_tick)
+            print('moving %s along %s from tick %s' % (piece, move_seq, self.current_tick))
 
         if not self.players[player].startswith('b') and not self.players[player].startswith('c'):
             # last move time only counts for non-bots
@@ -290,7 +290,7 @@ class Game(object):
     # move in given direction without crossing pieces
     def _get_move_seq_ensuring_no_cross(self, piece, row_dir, col_dir, steps, capture=True):
         moves = []
-        for i in xrange(1, steps + 1):
+        for i in range(1, steps + 1):
             i_row, i_col = piece.row + row_dir * i, piece.col + col_dir * i
             moves.append((i_row, i_col))
 
@@ -319,7 +319,7 @@ class Game(object):
                 continue
 
             tick_delta = self.current_tick - move.starting_tick
-            movements = (tick_delta + self.move_ticks - 1) / self.move_ticks
+            movements = (tick_delta + self.move_ticks - 1) // self.move_ticks
             for row, col in move.move_seq[movements:]:
                 if i_row == row and i_col == col:
                     return None
@@ -353,7 +353,7 @@ class Game(object):
         moving = {}
         for move in self.active_moves:
             tick_delta = self.current_tick - move.starting_tick
-            movements = tick_delta / self.move_ticks
+            movements = tick_delta // self.move_ticks
             if movements >= len(move.move_seq):
                 continue
 
@@ -362,7 +362,7 @@ class Game(object):
             new_row, new_col = move.move_seq[movements][0], move.move_seq[movements][1]
 
             if self.debug and (piece.row != new_row or piece.col != new_col):
-                print '%s to %s %s' % (piece, new_row, new_col)
+                print('%s to %s %s' % (piece, new_row, new_col))
 
             piece.row, piece.col = new_row, new_col
 
@@ -380,7 +380,7 @@ class Game(object):
                 continue
 
             tick_delta = self.current_tick - move.starting_tick
-            movements = tick_delta / self.move_ticks
+            movements = tick_delta // self.move_ticks
             if movements >= len(move.move_seq):
                 continue
 
@@ -499,7 +499,7 @@ class Game(object):
             tick_delta = self.current_tick - move.starting_tick
             if tick_delta >= self.move_ticks * (len(move.move_seq) - 1):
                 if self.debug:
-                    print '%s going on cooldown' % move.piece
+                    print('%s going on cooldown' % move.piece)
 
                 new_cooldowns.append(Cooldown(move.piece, self.current_tick))
                 updates.append({
@@ -519,7 +519,7 @@ class Game(object):
                 new_cooldowns.append(cooldown)
             else:
                 if self.debug:
-                    print '%s going off cooldown' % cooldown.piece
+                    print('%s going off cooldown' % cooldown.piece)
 
                 updates.append({
                     'type': 'endcooldown',
@@ -560,7 +560,7 @@ class Game(object):
         if move.piece.type == 'N' and tick_delta < total_move_ticks - self.move_ticks / 2:
             return -1, -1
 
-        movements = int(tick_delta) / self.move_ticks
+        movements = int(tick_delta) // self.move_ticks
         if movements >= len(move.move_seq):
             movements = len(move.move_seq) - 1
 
