@@ -1,13 +1,16 @@
 # Stage 1: Build frontend
 FROM node:18-alpine AS frontend-builder
 
+# Install build dependencies for native modules
+RUN apk add --no-cache autoconf automake libtool nasm make g++ zlib-dev libpng-dev
+
 WORKDIR /app/ui
 
 # Copy package files
 COPY ui/package*.json ./
 
 # Install dependencies
-RUN npm install
+RUN npm install --legacy-peer-deps
 
 # Copy UI source
 COPY ui/ ./
